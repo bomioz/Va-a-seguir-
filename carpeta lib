@@ -1,1 +1,53 @@
+// lib/agario-client.js
 
+const WebSocket = require('ws');
+
+class AgarioClient {
+  constructor({ region, partyCode, nickname, token }) {
+    this.region = region;
+    this.partyCode = partyCode;
+    this.nickname = nickname;
+    this.token = token;
+    this.ws = null;
+  }
+
+  connect() {
+    // URL de conexión a Agar.io según región
+    const server = `wss://${this.region}.agar.io/?ip=127.0.0.1&party=${this.partyCode}`;
+    this.ws = new WebSocket(server);
+
+    this.ws.on('open', () => {
+      console.log('Bot conectado a Agar.io');
+      this.sendAuth();
+      this.sendNickname();
+    });
+
+    this.ws.on('message', (data) => {
+      // Aquí puedes manejar los mensajes recibidos del servidor
+      // Por ahora no se procesa nada
+    });
+
+    this.ws.on('close', () => {
+      console.log('Conexión cerrada');
+    });
+
+    this.ws.on('error', (err) => {
+      console.error('Error en conexión:', err);
+    });
+  }
+
+  sendAuth() {
+    if (!this.token) return;
+    // Envía el token para autenticar el bot (si es necesario)
+    this.ws.send(JSON.stringify({ type: 'auth', token: this.token }));
+  }
+
+  sendNickname() {
+    // Envía el nickname del bot para mostrar en el juego
+    this.ws.send(JSON.stringify({ type: 'nick', nickname: this.nickname }));
+  }
+
+  // Aquí puedes agregar métodos para controlar los movimientos, dividirse, alimentarse, etc.
+}
+
+module.exports = AgarioClient;
