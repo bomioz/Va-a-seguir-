@@ -1,28 +1,66 @@
-const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
+const { Client, GatewayIntentBits } = require('discord.js');
+const AgarioClient = require('./lib/agario-client');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-
-client.once('ready', () => {
-  console.log(`Bot listo! Logged in as ${client.user.tag}`);
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-client.on('messageCreate', message => {
+const TOKEN = process.env.DISCORD_BOT_TOKEN;
+
+client.once('ready', () => {
+  console.log(`Bot listo como ${client.user.tag}`);
+});
+
+client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  const args = message.content.trim().split(/ +/g);
+  const prefix = '!';
+  if (!message.content.startsWith(prefix)) return;
+
+  const args = message.content.slice(prefix.length).trim().split(/\s+/);
   const command = args.shift().toLowerCase();
 
-  if (command === '!ping') {
-    message.channel.send('Pong!');
-  } else if (command === '!bots') {
-    if (args.length < 2) {
-      message.channel.send('Uso correcto: `!bots <código_party> <región> <modo>`');
-      return;
+  if (command === 'ping') {
+    message.reply('Pong! 🏓');
+  }
+
+  else if (command === 'bots') {
+    if (args.length < 3) {
+      return message.reply('Uso correcto: `!bots <código_party> <región> <modo>`');
     }
-    // Aquí más adelante irán tus instrucciones para crear los bots.
-    message.channel.send(`Comando bots recibido: party=${args[0]}, región=${args[1]}, modo=${args[2] || 'default'}`);
+    const [partyCode, region, mode] = args;
+
+    // Número de bots a crear (28)
+    const numBots = 28;
+
+    message.reply(`Creando ${numBots} bots en party ${partyCode} región ${region} con modo ${mode}...`);
+
+    for (let i = 0; i < numBots; i++) {
+      try {
+        const bot = new AgarioClient();
+
+        bot.on('connected', () => {
+          console.log(`Bot ${i+1} conectado a party ${partyCode} en región ${region}`);
+          bot.joinParty(partyCode, region);
+
+          if (mode === 'seguir') {
+            bot.followPlayer('Bom.ioz'); // Cambia el nombre si quieres que sigan otro nick
+          } else if (mode === 'burst') {
+            // burst = seguir, dividir y alimentar
+            bot.burstMode();
+          } else {
+            bot.feed();
+          }
+        });
+
+        bot.connect();
+
+      } catch (error) {
+        console.error(`Error creando bot ${i+1}:`, error);
+      }
+    }
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(TOKEN);
